@@ -500,10 +500,7 @@ class MarketAnalyzer:
 注意：禁止使用券商分析师那种中庸、死板的话术，说话要直接、犀利、带江湖气息！
 """
         return prompt
-2. 修改 _generate_template_review 备选模板
-当 AI 不可用时，备选模板也要保留“陈小群”的风格。
-code
-Python
+
 def _generate_template_review(self, overview: MarketOverview, news: List) -> str:
         """陈小群风格的备选模板（无LLM时使用）"""
         
