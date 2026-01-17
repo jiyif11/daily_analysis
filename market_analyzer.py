@@ -539,8 +539,10 @@ def _generate_template_review(self, overview: MarketOverview, news: List) -> str
 """
         return report
     
-def run_daily_review(self) -> str:
-        """执行陈小群风格的每日大盘复盘"""
+    def run_daily_review(self) -> str:
+        """
+        执行陈小群风格的每日大盘复盘
+        """
         logger.info("========== 开始【陈小群视角】大盘分析 ==========")
         
         # 1. 获取市场概览
