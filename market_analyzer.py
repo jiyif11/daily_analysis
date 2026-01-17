@@ -501,7 +501,7 @@ class MarketAnalyzer:
 """
         return prompt
 
-def _generate_template_review(self, overview: MarketOverview, news: List) -> str:
+    def _generate_template_review(self, overview: MarketOverview, news: List) -> str:
         """陈小群风格的备选模板（无LLM时使用）"""
         
         # 简单逻辑判定情绪
