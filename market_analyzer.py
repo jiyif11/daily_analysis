@@ -15,7 +15,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-
+import requests
 import akshare as ak
 import pandas as pd
 
@@ -87,15 +87,58 @@ class MarketAnalyzer:
     5. 生成大盘复盘报告
     """
     
-    # 主要指数代码
+    def get_yyb_stocks(yyb_id="10030463"):
+        """
+        从东方财富获取指定营业部上榜的证券代码
+        """
+        url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+        params = {
+        "reportName": "RPT_LHB_YYBDETAILNEW",
+        "columns": "SECURITY_CODE,SECURITY_NAME_ABBR",
+        "filter": f'(OPERATEDEPT_CODE="{yyb_id}")',
+        "pageNumber": "1",
+        "pageSize": "30",  # 获取最近100条上榜记录
+        "source": "WEB",
+        "client": "WEB"
+        }
+    
+        stock_map = {}
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            data = response.json()
+            if data and "result" in data and data["result"]:
+                for item in data["result"]["data"]:
+                    code = item["SECURITY_CODE"]
+                    name = item["SECURITY_NAME_ABBR"]
+                # 转换格式：6开头为sh，其他（0或3）为sz
+                # 如果脚本使用的是纯数字，可直接用 code
+                    formatted_code = f"sh{code}" if code.startswith('6') else f"sz{code}"
+                    stock_map[name] = formatted_code
+        except Exception as e:
+            print(f"获取营业部股票失败: {e}")
+    
+        return stock_map
+
+# 1. 保留原有的 MAIN_INDICES
     MAIN_INDICES = {
-        'sh000001': '上证指数',
-        'sz399001': '深证成指',
-        'sz399006': '创业板指',
-        'sh000688': '科创50',
-        'sh000016': '上证50',
-        'sh000300': '沪深300',
+        "上证指数": "sh000001",
+        "深证成指": "sz399001",
+        "创业板指": "sz399006",
+        "科创50": "sh000688",
+        "沪深300": "sh000300",
+        "中证500": "sh000905",
+        "中证1000": "sh000852",
+        "上证50": "sh000016"
     }
+
+# 2. 获取营业部（拉萨金融城南环路）的个股
+    print("正在同步东方财富营业部个股数据...")
+    yyb_stocks = get_yyb_stocks("10030463")
+
+# 3. 将个股追加到字典中
+    MAIN_INDICES.update(yyb_stocks)
+
+    print(f"同步完成，当前监控列表总数: {len(MAIN_INDICES)}")
     
     def __init__(self, search_service: Optional[SearchService] = None, analyzer=None):
         """
@@ -435,7 +478,7 @@ class MarketAnalyzer:
 
 ---
 
-# 输出要求（请严格按纯 Markdown，陈小群语气）：
+# 输出要求（请严格按纯 Markdown，陈小群思维语气）：
 
 ## 📊 {overview.date} 大盘复盘
 
@@ -457,6 +500,8 @@ class MarketAnalyzer:
 ## 六、小群语录
 （一句话犀利点评：例如“平庸是亏损的根源”或“空仓也是一种战斗”。）
 
+## 七、小群推荐
+（从所有提到的股票中，按照陈小群选股操作思路推荐最优的股票代码附带中文名，推荐数量不限。）
 ---
 
 注意：禁止使用券商分析师那种中庸、死板的话术，说话要直接、犀利、带江湖气息！
