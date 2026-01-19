@@ -2,6 +2,8 @@ name: 每日股票分析
 
 on:
   # 手动触发
+  repository_dispatch:        # 允许外部 API 触发
+    types: [remote_trigger]
   workflow_dispatch:
     inputs:
       mode:
