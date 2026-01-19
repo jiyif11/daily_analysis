@@ -314,18 +314,19 @@ class GeminiAnalyzer:
         },
         
         "intelligence": {
-            "latest_news": "【情绪催化】这条新闻能不能顶出个一字板？",
-            "risk_alerts": ["核按钮风险点", "跟风盘离场风险"],
-            "positive_catalysts": ["辨识度来源", "市场唯一的活口逻辑"],
-            "sentiment_summary": "一句话点评全场情绪"
+            "latest_news": "【最新消息】近期重要新闻摘要",
+            "risk_alerts": ["风险点1：具体描述", "风险点2：具体描述"],
+            "positive_catalysts": ["利好1：具体描述", "利好2：具体描述"],
+            "earnings_outlook": "业绩预期分析（基于年报预告、业绩快报等）",
+            "sentiment_summary": "舆情情绪一句话总结"
         },
         
         "battle_plan": {
             "sniper_points": {
-                "ideal_buy": "反核低吸位：XX元",
-                "secondary_buy": "打板确认位：XX元",
-                "stop_loss": "止损位：决不能破的价格",
-                "take_profit": "翻倍目标位/前高"
+                "ideal_buy": "理想买入点：XX元（在MA5附近）",
+                "secondary_buy": "次优买入点：XX元（在MA10附近）",
+                "stop_loss": "止损位：XX元（跌破MA20或X%）",
+                "take_profit": "目标位：XX元（前高/整数关口）"
             },
             "position_strategy": {
                 "suggested_position": "建议仓位：X成",
