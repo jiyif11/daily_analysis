@@ -89,48 +89,64 @@ class MarketAnalyzer:
     
     def get_margin_data(self):
         """
-        接入沪深融资余额（保留原始单位：元）
+        接入沪深融资余额，带重试机制
         """
-        try:
-            # 1. 设置日期范围（取最近7天，确保能拿到数据）
-            end_date = datetime.now().strftime("%Y%m%d")
-            start_date = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
+        # 设置重试次数
+        max_retries = 3
+        
+        # 1. 设置日期范围
+        end_date = datetime.now().strftime("%Y%m%d")
+        start_date = (datetime.now() - timedelta(days=10)).strftime("%Y%m%d")
 
-            # 2. 获取沪市融资余额 (SSE)
-            df_sse = ak.stock_margin_sse(start_date=start_date, end_date=end_date)
-            if df_sse.empty:
-                return "**融资余额统计**：暂无数据\n"
-            
-            # 按日期降序排列，确保 iloc[0] 是最新的一行
+        # --- 获取沪市数据 (SSE) ---
+        df_sse = None
+        for i in range(max_retries):
+            try:
+                df_sse = ak.stock_margin_sse(start_date=start_date, end_date=end_date)
+                if not df_sse.empty:
+                    break
+            except Exception as e:
+                print(f"第 {i+1} 次尝试获取沪市两融失败: {e}")
+                time.sleep(2)  # 等待2秒后重试
+        
+        if df_sse is None or df_sse.empty:
+            return "> 📊 **融资余额统计**：由于交易所连接限制，暂未获取到最新数据\n"
+
+        try:
+            # 按日期降序，确保 iloc[0] 是最新
             df_sse = df_sse.sort_values(by="信用交易日期", ascending=False)
-            last_sse = df_sse.iloc[0]  # 获取第一行
-            
-            sse_val = float(last_sse['融资余额'])  # 切换为融资余额，单位：元
+            last_sse = df_sse.iloc[0]
+            sse_val = float(last_sse['融资余额'])
             trade_date = last_sse['信用交易日期'].replace("-", "")
 
-            # 3. 获取深市融资余额 (SZSE)
-            # 深市接口通常返回的是当天汇总
-            df_szse = ak.stock_margin_szse(date=trade_date)
-            
-            if not df_szse.empty:
-                # 深市列名 'rzbal' 代表融资余额
-                # 用户指出深市默认单位是亿，此处乘以 10^8 换算为元
-                szse_val_yuan = float(df_szse.iloc[0]['rzbal']) * 100_000_000
-            else:
-                szse_val_yuan = 0.0
+            # --- 获取深市数据 (SZSE) ---
+            szse_val_yuan = 0.0
+            for i in range(max_retries):
+                try:
+                    # 深市接口通常对日期非常敏感，使用从沪市拿到的最新交易日
+                    df_szse = ak.stock_margin_szse(date=trade_date)
+                    if not df_szse.empty:
+                        # 识别列名
+                        col_name = 'rzbal' if 'rzbal' in df_szse.columns else '融资余额'
+                        # 单位换算：亿元 -> 元
+                        szse_val_yuan = float(df_szse.iloc[0][col_name]) * 100_000_000
+                        break
+                except Exception as e:
+                    print(f"第 {i+1} 次尝试获取深市两融失败: {e}")
+                    time.sleep(2)
 
             total_val = sse_val + szse_val_yuan
 
-            margin_res = (
+            return (
                 f"**融资余额统计 ({trade_date})**：\n"
                 f"- 沪深两市合计：{total_val:,.2f} 元\n"
                 f"- 沪市融资余额：{sse_val:,.2f} 元\n"
                 f"- 深市融资余额：{szse_val_yuan:,.2f} 元\n"
             )
-            return margin_res
 
         except Exception as e:
-            return f"**融资余额统计**：获取失败 (原因: {e})\n"
+            print(f"解析两融数据出错: {e}")
+            return "> 📊 **融资余额统计**：数据解析异常\n"
 
 # 1. 保留原有的 MAIN_INDICES
     MAIN_INDICES = {
