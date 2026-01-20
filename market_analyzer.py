@@ -89,32 +89,48 @@ class MarketAnalyzer:
     
     def get_margin_data(self):
         """
-        获取沪深两市两融余额（保留原始单位：元）
+        接入沪深融资余额（保留原始单位：元）
         """
         try:
-            # 获取沪市两融数据 (取最后一行即最新数据)
-            df_sh = ak.stock_margin_sh()
-            latest_sh = df_sh.iloc[-1]
-            sh_val = float(latest_sh['融资融券余额'])
-            sh_date = latest_sh['信用交易日期']
+            # 1. 设置日期范围（取最近7天，确保能拿到数据）
+            end_date = datetime.now().strftime("%Y%m%d")
+            start_date = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
 
-            # 获取深市两融数据
-            df_sz = ak.stock_margin_sz()
-            latest_sz = df_sz.iloc[-1]
-            sz_val = float(latest_sz['融资融券余额'])
+            # 2. 获取沪市融资余额 (SSE)
+            df_sse = ak.stock_margin_sse(start_date=start_date, end_date=end_date)
+            if df_sse.empty:
+                return "**融资余额统计**：暂无数据\n"
             
-            total_val = sh_val + sz_val
+            # 按日期降序排列，确保 iloc[0] 是最新的一行
+            df_sse = df_sse.sort_values(by="信用交易日期", ascending=False)
+            last_sse = df_sse.iloc[0]  # 获取第一行
+            
+            sse_val = float(last_sse['融资余额'])  # 切换为融资余额，单位：元
+            trade_date = last_sse['信用交易日期'].replace("-", "")
 
-            margin_info = (
-                f"**两融余额统计 ({sh_date})**：\n"
-                f"- 沪深全市场合计：{total_val:,.2f} 元\n"
-                f"- 上海市场两融余额：{sh_val:,.2f} 元\n"
-                f"- 深圳市场两融余额：{sz_val:,.2f} 元\n"
+            # 3. 获取深市融资余额 (SZSE)
+            # 深市接口通常返回的是当天汇总
+            df_szse = ak.stock_margin_szse(date=trade_date)
+            
+            if not df_szse.empty:
+                # 深市列名 'rzbal' 代表融资余额
+                # 用户指出深市默认单位是亿，此处乘以 10^8 换算为元
+                szse_val_yuan = float(df_szse.iloc[0]['rzbal']) * 100_000_000
+            else:
+                szse_val_yuan = 0.0
+
+            total_val = sse_val + szse_val_yuan
+
+            margin_res = (
+                f"**融资余额统计 ({trade_date})**：\n"
+                f"- 沪深两市合计：{total_val:,.2f} 元\n"
+                f"- 沪市融资余额：{sse_val:,.2f} 元\n"
+                f"- 深市融资余额：{szse_val_yuan:,.2f} 元\n"
             )
-            return margin_info
+            return margin_res
+
         except Exception as e:
-            print(f"获取两融数据出错: {e}")
-            return "**两融余额统计**：暂无相关数据\n"
+            return f"**融资余额统计**：获取失败 (原因: {e})\n"
 
 # 1. 保留原有的 MAIN_INDICES
     MAIN_INDICES = {
