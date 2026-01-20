@@ -87,37 +87,34 @@ class MarketAnalyzer:
     5. 生成大盘复盘报告
     """
     
-    def get_yyb_stocks(yyb_id="10030463"):
+    def get_margin_data(self):
         """
-        从东方财富获取指定营业部上榜的证券代码
+        获取沪深两市两融余额（保留原始单位：元）
         """
-        url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
-        params = {
-        "reportName": "RPT_LHB_YYBDETAILNEW",
-        "columns": "SECURITY_CODE,SECURITY_NAME_ABBR",
-        "filter": f'(OPERATEDEPT_CODE="{yyb_id}")',
-        "pageNumber": "1",
-        "pageSize": "30",  # 获取最近100条上榜记录
-        "source": "WEB",
-        "client": "WEB"
-        }
-    
-        stock_map = {}
         try:
-            response = requests.get(url, params=params, timeout=10)
-            data = response.json()
-            if data and "result" in data and data["result"]:
-                for item in data["result"]["data"]:
-                    code = item["SECURITY_CODE"]
-                    name = item["SECURITY_NAME_ABBR"]
-                # 转换格式：6开头为sh，其他（0或3）为sz
-                # 如果脚本使用的是纯数字，可直接用 code
-                    formatted_code = f"sh{code}" if code.startswith('6') else f"sz{code}"
-                    stock_map[name] = formatted_code
+            # 获取沪市两融数据 (取最后一行即最新数据)
+            df_sh = ak.stock_margin_sh()
+            latest_sh = df_sh.iloc[-1]
+            sh_val = float(latest_sh['融资融券余额'])
+            sh_date = latest_sh['信用交易日期']
+
+            # 获取深市两融数据
+            df_sz = ak.stock_margin_sz()
+            latest_sz = df_sz.iloc[-1]
+            sz_val = float(latest_sz['融资融券余额'])
+            
+            total_val = sh_val + sz_val
+
+            margin_info = (
+                f"**两融余额统计 ({sh_date})**：\n"
+                f"- 沪深全市场合计：{total_val:,.2f} 元\n"
+                f"- 上海市场两融余额：{sh_val:,.2f} 元\n"
+                f"- 深圳市场两融余额：{sz_val:,.2f} 元\n"
+            )
+            return margin_info
         except Exception as e:
-            print(f"获取营业部股票失败: {e}")
-    
-        return stock_map
+            print(f"获取两融数据出错: {e}")
+            return "**两融余额统计**：暂无相关数据\n"
 
 # 1. 保留原有的 MAIN_INDICES
     MAIN_INDICES = {
@@ -130,15 +127,6 @@ class MarketAnalyzer:
         "中证1000": "sh000852",
         "上证50": "sh000016"
     }
-
-# 2. 获取营业部（拉萨金融城南环路）的个股
-    print("正在同步东方财富营业部个股数据...")
-    yyb_stocks = get_yyb_stocks("10030463")
-
-# 3. 将个股追加到字典中
-    MAIN_INDICES.update(yyb_stocks)
-
-    print(f"同步完成，当前监控列表总数: {len(MAIN_INDICES)}")
     
     def __init__(self, search_service: Optional[SearchService] = None, analyzer=None):
         """
@@ -427,7 +415,7 @@ class MarketAnalyzer:
         # 板块信息
         top_sectors_text = ", ".join([f"{s['name']}({s['change_pct']:+.2f}%)" for s in overview.top_sectors[:3]])
         bottom_sectors_text = ", ".join([f"{s['name']}({s['change_pct']:+.2f}%)" for s in overview.bottom_sectors[:3]])
-        
+        margin_info = self.get_margin_data() # 调用新函数
         # 新闻信息 - 支持 SearchResult 对象或字典
         news_text = ""
         for i, n in enumerate(news[:6], 1):
@@ -476,6 +464,8 @@ class MarketAnalyzer:
 ## 市场新闻
 {news_text if news_text else "暂无相关新闻"}
 
+## 两融余额
+{margin_info}
 ---
 
 # 输出要求（请严格按纯 Markdown，陈小群思维语气）：
@@ -486,7 +476,7 @@ class MarketAnalyzer:
 （用一句话给今天定性：是该猛干还是该空仓？目前处于什么周期？）
 
 ## 二、大盘与合力分析
-（从成交量、两市表现看大资金的真实意图。3000亿成交量干不出牛市，只有合力才有主升。）
+（从成交量、两市表现、两融余额看大资金的真实意图。3000亿成交量干不出牛市，只有合力才有主升。）
 
 ## 三、核心标的与审美（重点！）
 （结合板块和涨停数，点评当前市场的“灵魂龙头”是谁。谁在带节奏？谁是跟风杂毛？有没有出现“核按钮”或“反核”？）
@@ -502,6 +492,7 @@ class MarketAnalyzer:
 
 ## 七、陈小群推荐
 （联网搜索陈小群现持有的所有股票，按照陈小群选股操作思路推荐最优的股票代码附带中文名，推荐数量不限。）
+
 ---
 
 注意：禁止使用券商分析师那种中庸、死板的话术，说话要直接、犀利、带江湖气息！
