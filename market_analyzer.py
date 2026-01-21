@@ -91,7 +91,7 @@ class MarketAnalyzer:
         """
         接入沪深融资余额，带重试机制
         """
-        proxy_url = "socks5h://ak:qwe123456@a1.minidc.cn:9082"
+        proxy_url = "socks5://ak:qwe123456@a1.minidc.cn:9082"
         os.environ['http_proxy'] = proxy_url
         os.environ['https_proxy'] = proxy_url
         
