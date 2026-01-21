@@ -9,7 +9,7 @@
 2. 搜索市场新闻形成复盘情报
 3. 使用大模型生成每日大盘复盘报告
 """
-
+import os
 import logging
 import time
 from dataclasses import dataclass, field
@@ -91,6 +91,10 @@ class MarketAnalyzer:
         """
         接入沪深融资余额，带重试机制
         """
+        proxy_url = "socks5h://ak:qwe123456@a1.minidc.cn:9082"
+        os.environ['http_proxy'] = proxy_url
+        os.environ['https_proxy'] = proxy_url
+        
         # 设置重试次数
         max_retries = 3
         
