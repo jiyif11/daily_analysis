@@ -96,7 +96,7 @@ class MarketAnalyzer:
         os.environ['https_proxy'] = proxy_url
         
         # 设置重试次数
-        max_retries = 3
+        max_retries = 9
         
         # 1. 设置日期范围
         end_date = datetime.now().strftime("%Y%m%d")
@@ -137,7 +137,7 @@ class MarketAnalyzer:
                         break
                 except Exception as e:
                     print(f"第 {i+1} 次尝试获取深市两融失败: {e}")
-                    time.sleep(2)
+                    time.sleep(20)
 
             total_val = sse_val + szse_val_yuan
 
