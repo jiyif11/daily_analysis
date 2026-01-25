@@ -19,8 +19,8 @@ import requests
 import akshare as ak
 import pandas as pd
 
-from config import get_config
-from search_service import SearchService
+from src.config import get_config
+from src.search_service import SearchService
 
 logger = logging.getLogger(__name__)
 
@@ -154,14 +154,12 @@ class MarketAnalyzer:
 
 # 1. 保留原有的 MAIN_INDICES
     MAIN_INDICES = {
-        "上证指数": "sh000001",
-        "深证成指": "sz399001",
-        "创业板指": "sz399006",
-        "科创50": "sh000688",
-        "沪深300": "sh000300",
-        "中证500": "sh000905",
-        "中证1000": "sh000852",
-        "上证50": "sh000016"
+        'sh000001': '上证指数',
+        'sz399001': '深证成指',
+        'sz399006': '创业板指',
+        'sh000688': '科创50',
+        'sh000016': '上证50',
+        'sh000300': '沪深300'
     }
     
     def __init__(self, search_service: Optional[SearchService] = None, analyzer=None):
@@ -512,7 +510,7 @@ class MarketAnalyzer:
 （用一句话给今天定性：是该猛干还是该空仓？目前处于什么周期？）
 
 ## 二、大盘与合力分析
-（从成交量、两市表现、当前沪深两市融资余额看大资金的真实意图。3000亿成交量干不出牛市，只有合力才有主升。）
+（从成交量、两市表现、当前沪深两市两融余额看大资金的真实意图。3000亿成交量干不出牛市，只有合力才有主升。）
 
 ## 三、核心标的与审美（重点！）
 （结合板块和涨停数，点评当前市场的“灵魂龙头”是谁。谁在带节奏？谁是跟风杂毛？有没有出现“核按钮”或“反核”？）
