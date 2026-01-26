@@ -23,9 +23,6 @@ from src.config import get_config
 from src.search_service import SearchService
 
 logger = logging.getLogger(__name__)
-proxy_url = "http://ak:qwe123456@a1.minidc.cn:9083"
-os.environ['http_proxy'] = proxy_url
-os.environ['https_proxy'] = proxy_url
 
 @dataclass
 class MarketIndex:
