@@ -24,9 +24,6 @@ A股自选股智能分析系统 - 主调度程序
 import os
 
 # 代理配置 - 仅在本地环境使用，GitHub Actions 不需要
-proxy_url = "http://ak:qwe123456@a1.minidc.cn:9083"
-os.environ['http_proxy'] = proxy_url
-os.environ['https_proxy'] = proxy_url
 
 import argparse
 import logging
