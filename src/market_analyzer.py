@@ -198,7 +198,7 @@ class MarketAnalyzer:
         
         return overview
 
-    def _call_akshare_with_retry(self, fn, name: str, attempts: int = 2):
+    def _call_akshare_with_retry(self, fn, name: str, attempts: int = 9):
         last_error: Optional[Exception] = None
         for attempt in range(1, attempts + 1):
             try:
@@ -219,7 +219,7 @@ class MarketAnalyzer:
             logger.info("[大盘] 获取主要指数实时行情...")
             
             # 使用 akshare 获取指数行情（新浪财经接口，包含深市指数）
-            df = self._call_akshare_with_retry(ak.stock_zh_index_spot_sina, "指数行情", attempts=2)
+            df = self._call_akshare_with_retry(ak.stock_zh_index_spot_sina, "指数行情", attempts=9)
             
             if df is not None and not df.empty:
                 for code, name in self.MAIN_INDICES.items():
@@ -262,7 +262,7 @@ class MarketAnalyzer:
             logger.info("[大盘] 获取市场涨跌统计...")
             
             # 获取全部A股实时行情
-            df = self._call_akshare_with_retry(ak.stock_zh_a_spot_em, "A股实时行情", attempts=2)
+            df = self._call_akshare_with_retry(ak.stock_zh_a_spot_em, "A股实时行情", attempts=9)
             
             if df is not None and not df.empty:
                 # 涨跌统计
@@ -296,7 +296,7 @@ class MarketAnalyzer:
             logger.info("[大盘] 获取板块涨跌榜...")
             
             # 获取行业板块行情
-            df = self._call_akshare_with_retry(ak.stock_board_industry_name_em, "行业板块行情", attempts=2)
+            df = self._call_akshare_with_retry(ak.stock_board_industry_name_em, "行业板块行情", attempts=9)
             
             if df is not None and not df.empty:
                 change_col = '涨跌幅'
