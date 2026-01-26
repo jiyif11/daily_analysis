@@ -91,9 +91,9 @@ class MarketAnalyzer:
         """
         接入沪深融资余额，带重试机制
         """
-        proxy_url = "http://ak:qwe123456@a1.minidc.cn:9083"
-        os.environ['http_proxy'] = proxy_url
-        os.environ['https_proxy'] = proxy_url
+       # proxy_url = "http://ak:qwe123456@a1.minidc.cn:9083"
+       # os.environ['http_proxy'] = proxy_url
+       # os.environ['https_proxy'] = proxy_url
         
         # 设置重试次数
         max_retries = 9
