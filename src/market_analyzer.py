@@ -159,7 +159,7 @@ class MarketAnalyzer:
         'sz399006': '创业板指',
         'sh000688': '科创50',
         'sh000016': '上证50',
-        'sh000300': '沪深300'，
+        'sh000300': '沪深300',
     }
     
     def __init__(self, search_service: Optional[SearchService] = None, analyzer=None):
