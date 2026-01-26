@@ -72,7 +72,7 @@ jobs:
           # ==========================================
           BOCHA_API_KEYS: ${{ secrets.BOCHA_API_KEYS }}
           TAVILY_API_KEYS: ${{ vars.TAVILY_API_KEYS || secrets.TAVILY_API_KEYS }}
-          SERPAPI_API_KEYS: ${{ secrets.SERPAPI_API_KEYS }}
+          SERPAPI_API_KEYS: ${{ vars.SERPAPI_API_KEYS || secrets.SERPAPI_API_KEYS }}
           
           # ==========================================
           # 通知渠道（可同时配置多个，全部推送）
