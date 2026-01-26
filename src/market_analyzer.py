@@ -159,7 +159,7 @@ class MarketAnalyzer:
         'sz399006': '创业板指',
         'sh000688': '科创50',
         'sh000016': '上证50',
-        'sh000300': '沪深300'
+        'sh000300': '沪深300'，
     }
     
     def __init__(self, search_service: Optional[SearchService] = None, analyzer=None):
@@ -502,7 +502,7 @@ class MarketAnalyzer:
 {margin_info}
 ---
 
-# 输出要求（请严格按纯 Markdown，陈小群思维语气）：
+# 输出格式模板（请严格按此格式输出）：
 
 ## 📊 {overview.date} 大盘复盘
 
