@@ -414,7 +414,7 @@ class MarketAnalyzer:
             
             generation_config = {
                 'temperature': 0.7,
-                'max_output_tokens': 2048,
+                'max_output_tokens': 4000,
             }
             
             # 根据 analyzer 使用的 API 类型调用
