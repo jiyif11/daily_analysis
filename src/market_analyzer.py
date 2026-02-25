@@ -612,7 +612,7 @@ Lagging: {bottom_sectors_text if bottom_sectors_text else "N/A"}"""
 
 ---
 
-Output the report content directly, no extra commentary.
+Output the report content directly in Chinese, no extra commentary.
 """
 
         # A 股场景使用中文提示语
