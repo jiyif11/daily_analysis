@@ -60,6 +60,16 @@ class Config:
     tushare_token: Optional[str] = None
     
     # === AI 分析配置 ===
+    # LiteLLM unified model config (provider/model format, e.g. gemini/gemini-2.5-flash)
+    litellm_model: str = ""  # Primary model; must include provider prefix when set explicitly
+    litellm_fallback_models: List[str] = field(default_factory=list)  # Cross-model fallback list
+
+    # Multi-key support: each list is parsed from *_API_KEYS (comma-separated) with single-key fallback
+    gemini_api_keys: List[str] = field(default_factory=list)
+    anthropic_api_keys: List[str] = field(default_factory=list)
+    openai_api_keys: List[str] = field(default_factory=list)
+
+    # Legacy single-key fields (kept for backward compatibility; gemini_api_keys[0] when set)
     gemini_api_key: Optional[str] = None
     gemini_model: str = "gemini-3-flash-preview"  # 主模型
     gemini_model_fallback: str = "gemini-2.5-flash"  # 备选模型
@@ -82,7 +92,7 @@ class Config:
     openai_model: str = "gpt-4o-mini"  # OpenAI 兼容模型名称
     openai_vision_model: Optional[str] = None  # Vision 专用模型（可选，不配置则用 openai_model；部分模型如 DeepSeek 不支持图像）
     openai_temperature: float = 0.7  # OpenAI 温度参数（0.0-2.0，默认0.7）
-    
+
     # === 搜索引擎配置（支持多 Key 负载均衡）===
     bocha_api_keys: List[str] = field(default_factory=list)  # Bocha API Keys
     tavily_api_keys: List[str] = field(default_factory=list)  # Tavily API Keys
@@ -152,6 +162,7 @@ class Config:
 
     # PushPlus 推送配置
     pushplus_token: Optional[str] = None  # PushPlus Token
+    pushplus_topic: Optional[str] = None  # PushPlus 群组编码（一对多推送）
 
     # Server酱3 推送配置
     serverchan3_sendkey: Optional[str] = None  # Server酱3 SendKey
@@ -165,6 +176,7 @@ class Config:
     # 消息长度限制（字节）- 超长自动分批发送
     feishu_max_bytes: int = 20000  # 飞书限制约 20KB，默认 20000 字节
     wechat_max_bytes: int = 4000   # 企业微信限制 4096 字节，默认 4000 字节
+    discord_max_words: int = 2000  # Discord 限制 2000 字，默认 2000 字
     wechat_msg_type: str = "markdown"  # 企业微信消息类型，默认 markdown 类型
 
     # Markdown 转图片（Issue #289）：对不支持 Markdown 的渠道以图片发送
@@ -208,6 +220,8 @@ class Config:
     # === 实时行情增强数据配置 ===
     # 实时行情开关（关闭后使用历史收盘价进行分析）
     enable_realtime_quote: bool = True
+    # 盘中实时技术面：启用时用实时价计算 MA/多头排列（Issue #234）；关闭则用昨日收盘
+    enable_realtime_technical_indicators: bool = True
     # 筹码分布开关（该接口不稳定，云端部署建议关闭）
     enable_chip_distribution: bool = True
     # 东财接口补丁开关
@@ -270,10 +284,7 @@ class Config:
     
     # Telegram 机器人 - 已有 telegram_bot_token, telegram_chat_id
     telegram_webhook_secret: Optional[str] = None   # Webhook 密钥
-    
-    # Discord 机器人扩展配置
-    discord_bot_status: str = "A股智能分析 | /help"  # 机器人状态信息
-    
+        
     # 单例实例存储
     _instance: Optional['Config'] = None
     
@@ -358,6 +369,61 @@ class Config:
         if not stock_list:
             stock_list = ['600519', '000001', '300750']
         
+        # === LiteLLM multi-key parsing ===
+        # GEMINI_API_KEYS (comma-separated) > GEMINI_API_KEY (single)
+        _gemini_keys_raw = os.getenv('GEMINI_API_KEYS', '')
+        gemini_api_keys = [k.strip() for k in _gemini_keys_raw.split(',') if k.strip()]
+        _single_gemini = os.getenv('GEMINI_API_KEY', '').strip()
+        if not gemini_api_keys and _single_gemini:
+            gemini_api_keys = [_single_gemini]
+
+        # ANTHROPIC_API_KEYS > ANTHROPIC_API_KEY
+        _anthropic_keys_raw = os.getenv('ANTHROPIC_API_KEYS', '')
+        anthropic_api_keys = [k.strip() for k in _anthropic_keys_raw.split(',') if k.strip()]
+        _single_anthropic = os.getenv('ANTHROPIC_API_KEY', '').strip()
+        if not anthropic_api_keys and _single_anthropic:
+            anthropic_api_keys = [_single_anthropic]
+
+        # OPENAI_API_KEYS > AIHUBMIX_KEY > OPENAI_API_KEY
+        _openai_keys_raw = os.getenv('OPENAI_API_KEYS', '')
+        openai_api_keys = [k.strip() for k in _openai_keys_raw.split(',') if k.strip()]
+        if not openai_api_keys:
+            _aihubmix = os.getenv('AIHUBMIX_KEY', '').strip()
+            _single_openai = os.getenv('OPENAI_API_KEY', '').strip()
+            _fallback_key = _aihubmix or _single_openai
+            if _fallback_key:
+                openai_api_keys = [_fallback_key]
+
+        # LITELLM_MODEL: explicit config takes precedence; else infer from available keys
+        litellm_model = os.getenv('LITELLM_MODEL', '').strip()
+        if not litellm_model:
+            _gemini_model_name = os.getenv('GEMINI_MODEL', 'gemini-3-flash-preview').strip()
+            _anthropic_model_name = os.getenv('ANTHROPIC_MODEL', 'claude-3-5-sonnet-20241022').strip()
+            _openai_model_name = os.getenv('OPENAI_MODEL', 'gpt-4o-mini').strip()
+            if gemini_api_keys:
+                litellm_model = f'gemini/{_gemini_model_name}'
+            elif anthropic_api_keys:
+                litellm_model = f'anthropic/{_anthropic_model_name}'
+            elif openai_api_keys:
+                # For openai-compatible models, add prefix only if not already prefixed
+                if '/' not in _openai_model_name:
+                    litellm_model = f'openai/{_openai_model_name}'
+                else:
+                    litellm_model = _openai_model_name
+
+        # LITELLM_FALLBACK_MODELS: comma-separated list of fallback models
+        _fallback_str = os.getenv('LITELLM_FALLBACK_MODELS', '')
+        if _fallback_str.strip():
+            litellm_fallback_models = [m.strip() for m in _fallback_str.split(',') if m.strip()]
+        else:
+            # Backward compat: use gemini_model_fallback when primary is gemini
+            _gemini_fallback = os.getenv('GEMINI_MODEL_FALLBACK', 'gemini-2.5-flash').strip()
+            if litellm_model.startswith('gemini/') and _gemini_fallback:
+                _fb = f'gemini/{_gemini_fallback}' if '/' not in _gemini_fallback else _gemini_fallback
+                litellm_fallback_models = [_fb]
+            else:
+                litellm_fallback_models = []
+
         # 解析搜索引擎 API Keys（支持多个 key，逗号分隔）
         bocha_keys_str = os.getenv('BOCHA_API_KEYS', '')
         bocha_api_keys = [k.strip() for k in bocha_keys_str.split(',') if k.strip()]
@@ -387,6 +453,11 @@ class Config:
             feishu_app_secret=os.getenv('FEISHU_APP_SECRET'),
             feishu_folder_token=os.getenv('FEISHU_FOLDER_TOKEN'),
             tushare_token=os.getenv('TUSHARE_TOKEN'),
+            litellm_model=litellm_model,
+            litellm_fallback_models=litellm_fallback_models,
+            gemini_api_keys=gemini_api_keys,
+            anthropic_api_keys=anthropic_api_keys,
+            openai_api_keys=openai_api_keys,
             gemini_api_key=os.getenv('GEMINI_API_KEY'),
             gemini_model=os.getenv('GEMINI_MODEL', 'gemini-3-flash-preview'),
             gemini_model_fallback=os.getenv('GEMINI_MODEL_FALLBACK', 'gemini-2.5-flash'),
@@ -434,6 +505,7 @@ class Config:
             pushover_user_key=os.getenv('PUSHOVER_USER_KEY'),
             pushover_api_token=os.getenv('PUSHOVER_API_TOKEN'),
             pushplus_token=os.getenv('PUSHPLUS_TOKEN'),
+            pushplus_topic=os.getenv('PUSHPLUS_TOPIC'),
             serverchan3_sendkey=os.getenv('SERVERCHAN3_SENDKEY'),
             custom_webhook_urls=[u.strip() for u in os.getenv('CUSTOM_WEBHOOK_URLS', '').split(',') if u.strip()],
             custom_webhook_bearer_token=os.getenv('CUSTOM_WEBHOOK_BEARER_TOKEN'),
@@ -451,6 +523,7 @@ class Config:
             feishu_max_bytes=int(os.getenv('FEISHU_MAX_BYTES', '20000')),
             wechat_max_bytes=wechat_max_bytes,
             wechat_msg_type=wechat_msg_type_lower,
+            discord_max_words=int(os.getenv('DISCORD_MAX_WORDS', '2000')),
             markdown_to_image_channels=[
                 c.strip().lower()
                 for c in os.getenv('MARKDOWN_TO_IMAGE_CHANNELS', '').split(',')
@@ -507,6 +580,9 @@ class Config:
             discord_bot_status=os.getenv('DISCORD_BOT_STATUS', 'A股智能分析 | /help'),
             # 实时行情增强数据配置
             enable_realtime_quote=os.getenv('ENABLE_REALTIME_QUOTE', 'true').lower() == 'true',
+            enable_realtime_technical_indicators=os.getenv(
+                'ENABLE_REALTIME_TECHNICAL_INDICATORS', 'true'
+            ).lower() == 'true',
             enable_chip_distribution=os.getenv('ENABLE_CHIP_DISTRIBUTION', 'true').lower() == 'true',
             # 东财接口补丁开关
             enable_eastmoney_patch=os.getenv('ENABLE_EASTMONEY_PATCH', 'false').lower() == 'true',
@@ -642,10 +718,14 @@ class Config:
         if not self.tushare_token:
             warnings.append("提示：未配置 Tushare Token，将使用其他数据源")
         
-        if not self.gemini_api_key and not self.anthropic_api_key and not self.openai_api_key:
-            warnings.append("警告：未配置 Gemini/Anthropic/OpenAI API Key，AI 分析功能将不可用")
-        elif not self.gemini_api_key and not self.anthropic_api_key:
-            warnings.append("提示：未配置 Gemini/Anthropic API Key，将使用 OpenAI 兼容 API")
+        has_any_llm_key = bool(self.gemini_api_keys or self.anthropic_api_keys or self.openai_api_keys)
+        if not has_any_llm_key:
+            warnings.append("警告：未配置任何 LLM API Key（GEMINI_API_KEY/ANTHROPIC_API_KEY/OPENAI_API_KEY），AI 分析功能将不可用")
+        elif not self.litellm_model:
+            warnings.append(
+                "提示：LITELLM_MODEL 未配置，将自动从可用 API Key 推断模型。"
+                "gemini_model 等 legacy 字段将在未来版本弃用，建议尽早配置 LITELLM_MODEL（格式如 gemini/gemini-2.5-flash）"
+            )
         
         if not self.bocha_api_keys and not self.tavily_api_keys and not self.brave_api_keys and not self.serpapi_keys:
             warnings.append("提示：未配置搜索引擎 API Key (Bocha/Tavily/Brave/SerpAPI)，新闻搜索功能将不可用")
